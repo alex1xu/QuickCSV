@@ -1,0 +1,20 @@
+#two spaces for indentation
+---
+  data_file: "test_data.csv"
+   #window color scheme
+  theme:
+    color: ["#d6ffe0","#b3ffc6","#75d18c"]
+  #logic constants
+  lc:
+    acc: 40
+    fund_mult: 1
+    sig_qty: 1
+  #UI constants
+  dc:
+    framesize-x: 650
+    framesize-y: 900
+    leftsize-x: 250
+    UIdf: "%m/%d/%Y"
+    UItf: "%H:%M"
+    CSVdf: "%Y%m%d"
+    CSVtf: "%H%M"
