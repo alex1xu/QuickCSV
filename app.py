@@ -1,23 +1,31 @@
-#File contains the main GUI elements
+"""
+Alex Xu (alex1xu)
+alexxugn@gmail.com
+
+app.py
+-creates the GUI
+-populates trade listing widgets
+"""
+
 from tkinter import *
 from tkinter import messagebox
 from tkinter import ttk
-#pip install tkcalendar if dont have
 from tkcalendar import *
 from datetime import *
-import time
-from PIL import Image, ImageTk
-import pandas as pd
-
-#Trade Listing class in TradeListing.py
-import TradeListing as trade
+import util as util
 import __main__ as main
 
-class GUI:
-    def __init__(self,full_trade_listings,**configs):
-        self.configs=configs
 
-#tkinter interpreter
+class GUI:
+
+    """
+    -creates the GUI
+    -populates editor with existing trades
+    """
+    def __init__(self):
+        self.configs=main.configs
+
+# main window set-up
         self.root=Tk()
         self.root.title('Quick CSV Editor')
         self.root.geometry(str(self.configs['dc']['framesize-x'])+'x'+str(self.configs['dc']['framesize-y']))
@@ -25,11 +33,10 @@ class GUI:
         style=ttk.Style(self.root)
         style.theme_use('clam')
 
-#canvas set-up
         self.main_frame=Frame(self.root)
         self.main_frame.pack()
 
-#scroll bar set-up
+# scroll-bar set-up
         scroll_canvas=Canvas(self.main_frame,width=self.configs['dc']['leftsize-x'],height=self.configs['dc']['framesize-y'])
 
         self.left_frame=Frame(scroll_canvas)
@@ -46,38 +53,31 @@ class GUI:
 
         self.right_frame=Frame(self.main_frame)
         self.right_frame.pack(side=RIGHT)
- 
-#main widget set-up
-        self.fields_list=self.createNewTradeEditor()
+
+# widget set-up
+        self.fields_list=self.create_trade_editor()
 
         self.change_color(self.configs['theme']['color'][1],self.right_frame)
-        
+
+# populates frame with trade widgets
         self.full_trade_listings=[]
         self.full_trade_listings_widgets=[]
-        for each in main.CSV.trade_listings:
-            self.shiftTradeListings()
-            self.createTradeListingTab(each,0)
-        
+        for each in util.CSV.trade_listings:
+            self.shift_trade_listings_down()
+            self.create_new_trade_listing_tab(each, 0)
+
         self.root.resizable(False,False)
         self.root.mainloop()
 
-#displays listings
-#sort_by
-# 0=default/TradeDate sort
-# 1=entryTime sort
-# 2=exitTime sort
-    def displayTradeListings(self,sort_by=0,mkt=None,qty_min=None,qty_max=None,entryTime=None,exitTime=None,_type=None,lmtPrc=None,ptPrc=None,slPrc=None):
-        for i in range(len(self.full_trade_listings)):
-            for j in range(len(self.full_trade_listings)):
-                pass
+    """
+    *********************************************
+    General utility functions
+    *********************************************
+    """
 
-    def shiftTradeListings(self):
-        j=1
-        for each in self.full_trade_listings_widgets:
-            each.grid(row=j,column=0)
-            j+=1
-
-#changes the color of a component
+    """
+    changes the color of a subtree of widgets
+    """
     def change_color(self,color,container):
         if type(container) is not Frame and type(container) is not Button and type(container) is not OptionMenu and type(container) is not Label and type(container) is not Radiobutton and type(container) is not Canvas:
             return
@@ -89,86 +89,53 @@ class GUI:
         for child in container.winfo_children():
             self.change_color(color,child)
 
-#creates a new dropdown menu
-#returns: selected option,menu
-    def createNewMenu(self,field_name,options,row,where,existing_value='Empty',column=0):
-        self.createNewDescLabel(field_name,row,where)
-
-        selected=StringVar()
-        selected.set(existing_value)
-
-        menu=OptionMenu(where,selected,*options)
-        menu.grid(row=row,column=column+1,padx=(5,10),pady=10)
-        
-        return selected,menu
-
-#creates a list of new mutually exclusive radio buttons
-    def createNewOption(self,field_names,row,where,column=0):
-        var=IntVar()
-        for i in range(len(field_names)):
-            button=Radiobutton(where,text=field_names[i],variable=var,value=i)
-            button.grid(row=row,column=column+i,padx=10,pady=10)
-
-        return var
-
-#create a new entry without desc
-    def createNewEntry(self,row,where,column=0,existing_value=0):
-        entryText=StringVar()
-
-        entry=Entry(where,width=10,textvariable=entryText)
-        entry.grid(row=row,column=column+1,padx=(5,10),pady=10)
-        entry.insert(0,existing_value)
-
-        return entryText
-
-#creates a desc label
-    def createNewDescLabel(self,field_name,row,where,column=0):
-        desc=Label(where,text=field_name)
-        desc.grid(row=row,column=column,padx=(10,5),pady=10)
-
-#creates a new entry field
-    def createNewDescEntry(self,field_name,row,where,column=0,existing_value=0):
-        self.createNewDescLabel(field_name,row,where,column=column)
-        entry=self.createNewEntry(row,where,column=column,existing_value=existing_value)
-
-        return entry
-
-#creates a new label
-    def createNewLabel(self,field_name,row,where,column=0,existing_value=0):
-        self.createNewDescLabel(field_name,row,where)
-
-        value=Label(where,text=existing_value)
-        value.grid(row=row,column=column+1,padx=(5,10),pady=10)
-
-#creates a drop down calendar
-    def createNewDatePicker(self,field_name,row,where,column=0,existing_value=0):
-        self.createNewDescLabel(field_name,row,where,column=column)
-
-        today=datetime.now()
-        calendar=DateEntry(where,width=10,year=today.year,month=today.month,day=today.day)
-        calendar.grid(row=row,column=column+1,padx=10,pady=10)
-
-        entry=self.createNewEntry(row,where,column+1,existing_value=today.strftime(self.configs['dc']['UItf']))
-
-        return calendar,entry
-
-    def checkForErrors(self):
+    """
+    TO BE IMPLEMENTED
+    
+    checks every field for errors
+    """
+    def check_for_errors(self):
         if self.fields_list['mkt'].get()=='Empty':
-            self.showErrorMessage('Form Entry Error','Market field is empty')
+            self.create_new_popup_widget('Form Entry Error', 'Market field is empty')
             return True
 
-    def showErrorMessage(self,error_type,error_message):
-        messagebox.showerror(error_type,error_message)
+    """
+    *********************************************
+    Trade listing tab display functions
+    *********************************************
+    """
 
-#creates a new trade listing from gui elements
-    def saveTradeListing(self):
-        if self.checkForErrors():
+    """
+    TO BE IMPLEMENTED
+    
+    re-orders the trades based on parameters
+    """
+    def display_trade_listings(self, sort_by=0,mkt=None,qty_min=None,qty_max=None,entryTime=None, exitTime=None,_type=None,lmtPrc=None,ptPrc=None,slPrc=None):
+        for i in range(len(self.full_trade_listings)):
+            for j in range(len(self.full_trade_listings)):
+                pass
+
+    """
+    shifts each trade listing tab down, usually used for sorting/adding a new tab
+    """
+    def shift_trade_listings_down(self):
+        j=1
+        for each in self.full_trade_listings_widgets:
+            each.grid(row=j,column=0)
+            j+=1
+
+    """
+    -creates a new trade listing from the current values in each field
+    -writes the trade listing to the csv
+    """
+    def save_as_new_trade_listing(self):
+        if self.check_for_errors():
             return
 
         entrydt=self.fields_list['entryTime']
         exitdt=self.fields_list['exitTime']
 
-        result=trade.TradeListing(
+        result=util.TradeListing(
             tradeDate=datetime.now(),
             mkt=self.fields_list['mkt'].get(),
             qty=self.fields_list['qty'].get(),
@@ -179,61 +146,20 @@ class GUI:
             ptPrc=self.fields_list['ptPrc'].get(),
             slPrc=self.fields_list['slPrc'].get())
 
-        main.CSV.trade_listings.append(result)
+        util.CSV.trade_listings.append(result)
 
-        self.shiftTradeListings()
-        self.createTradeListingTab(result,0)
-        
-        main.CSV.write()
-        main.CSV.read()
+        self.shift_trade_listings_down()
+        self.create_new_trade_listing_tab(result, 0)
+
+        util.CSV.write()
+        util.CSV.read()
 
         return result
 
-#creates the trade listing editor
-    def createNewTradeEditor(self):
-        fields_list={}
-#Buy/Sell
-        fields_list['buy/sell']=self.createNewOption(['Buy','Sell'],0,self.right_frame)
-
-#Fixed/Limit/Stop
-        fields_list['type']=self.createNewOption(['Fixed Time','Limit Order','Stop Order'],1,self.right_frame)
-
-#Reloadable
-        fields_list['reloadable']=self.createNewMenu('Reloadable',['True','False'],2,self.right_frame,existing_value='False')[0]
-
-#Market
-        fields_list['mkt']=self.createNewMenu('Market',[i for i in range(10)],3,self.right_frame,'Empty')[0]
-
-#Fund Qty
-        fields_list['qty']=self.createNewDescEntry('Fund Qty',4,self.right_frame)
-
-#Constants
-        self.createNewLabel('Fund Mult: ',5,self.right_frame,existing_value=self.configs['lc']['fund_mult'])
-        self.createNewLabel('Sig Qty: ',6,self.right_frame,existing_value=self.configs['lc']['sig_qty'])
-
-#Entry date time
-        fields_list['entryTime']=self.createNewDatePicker('Entry DateTime',7,self.right_frame)
-
-#Exit date time
-        fields_list['exitTime']=self.createNewDatePicker('Exit DateTime',8,self.right_frame)
-
-#Limit Price
-        fields_list['lmtPrc']=self.createNewDescEntry('Limit Price',9,self.right_frame)
-
-#P/T Price
-        fields_list['ptPrc']=self.createNewDescEntry('P/T Price',10,self.right_frame)
-
-#S/L Price
-        fields_list['slPrc']=self.createNewDescEntry('S/L Price',11,self.right_frame)
-
-#create save button
-        save_button=Button(self.right_frame,text='Save',command=self.saveTradeListing)
-        save_button.grid(row=12,column=1)
-
-        return fields_list
-
-#updates the trade listing editor with the values of a trade listing
-    def updateTradeEditor(self,trade_listing):
+    """
+    updates each of the fields in the editor with the values from a trade listing
+    """
+    def update_editor_with_trade_listing(self, trade_listing):
         self.fields_list['buy/sell'].set('Buy' if trade_listing.qty<=0 else 'Sell')
         self.fields_list['mkt'].set(int(trade_listing.mkt))
         self.fields_list['qty'].set(float(trade_listing.qty))
@@ -246,29 +172,169 @@ class GUI:
         self.fields_list['ptPrc'].set(int(trade_listing.ptPrc))
         self.fields_list['slPrc'].set(int(trade_listing.slPrc))
 
-#creates a sidebar tab to select a trade listing
-    def createTradeListingTab(self,trade_listing,row,column=0):
+    """
+    *********************************************
+    GUI set-up functions
+    *********************************************
+    """
+
+    """
+    creates all of the widgets needed to input a new trade listing
+    """
+    def create_trade_editor(self):
+        fields_list={}
+
+        #Buy/Sell
+        fields_list['buy/sell']=self.create_new_option_button_widget(['Buy', 'Sell'], 0, self.right_frame)
+
+        #Fixed/Limit/Stop
+        fields_list['type']=self.create_new_option_button_widget(['Fixed Time', 'Limit Order', 'Stop Order'], 1, self.right_frame)
+
+        #Reloadable
+        fields_list['reloadable']=self.create_new_menu_widget('Reloadable', ['True', 'False'], 2, self.right_frame, existing_value='False')[0]
+
+        #Market
+        fields_list['mkt']=self.create_new_menu_widget('Market', [i for i in range(10)], 3, self.right_frame, 'Empty')[0]
+
+        #Fund Qty
+        fields_list['qty']=self.create_new_entry_label_widget('Fund Qty', 4, self.right_frame)
+
+        #Constants
+        self.create_new_label_widget('Fund Mult: ', 5, self.right_frame, existing_value=self.configs['lc']['fund_mult'])
+        self.create_new_label_widget('Sig Qty: ', 6, self.right_frame, existing_value=self.configs['lc']['sig_qty'])
+
+        #Entry date time
+        fields_list['entryTime']=self.create_new_entry_calendar_widget('Entry DateTime', 7, self.right_frame,existing_value=datetime.now().strftime(self.configs['dc']['UItf']))
+
+        #Exit date time
+        fields_list['exitTime']=self.create_new_entry_calendar_widget('Exit DateTime', 8, self.right_frame,existing_value=datetime.now().strftime(self.configs['dc']['UItf']))
+
+        #Limit Price
+        fields_list['lmtPrc']=self.create_new_entry_label_widget('Limit Price', 9, self.right_frame)
+
+        #P/T Price
+        fields_list['ptPrc']=self.create_new_entry_label_widget('P/T Price', 10, self.right_frame)
+
+        #S/L Price
+        fields_list['slPrc']=self.create_new_entry_label_widget('S/L Price', 11, self.right_frame)
+
+        #create save button
+        save_button=Button(self.right_frame, text='Save', command=self.save_as_new_trade_listing)
+        save_button.grid(row=12,column=1)
+
+        return fields_list
+
+    """
+    creates a tab for a trade listing
+    """
+    def create_new_trade_listing_tab(self, trade_listing, row, column=0):
         self_frame=Frame(self.left_frame)
         self_frame.grid(row=row,column=column,padx=2,pady=2)
 
         desc_text='Trade Date: {tradeDate}\nEntry Time: {entryTime}\nExit Time: {exitTime}\nmkt: {mkt}\nqty: {qty}'.format(
-                tradeDate=trade_listing.tradeDate.strftime(self.configs['dc']['UIdf']),
-                entryTime=trade_listing.entryTime.strftime(self.configs['dc']['UIdtf']),
-                exitTime=trade_listing.exitTime.strftime(self.configs['dc']['UIdtf']),
-                mkt=trade_listing.mkt,
-                qty=trade_listing.qty)
+            tradeDate=trade_listing.tradeDate.strftime(self.configs['dc']['UIdf']),
+            entryTime=trade_listing.entryTime.strftime(self.configs['dc']['UIdtf']),
+            exitTime=trade_listing.exitTime.strftime(self.configs['dc']['UIdtf']),
+            mkt=trade_listing.mkt,
+            qty=trade_listing.qty)
         desc=Label(self_frame,text=desc_text)
         desc.grid(row=0,column=0,padx=(25,5),pady=10)
-        
-        button=Button(self_frame,text='Edit Trade',command=lambda: self.updateTradeEditor(trade_listing))
+
+        button=Button(self_frame, text='Edit Trade', command=lambda: self.update_editor_with_trade_listing(trade_listing))
         button.grid(row=1,column=0,padx=10,pady=5)
 
-        button=Button(self_frame,text='Remove Trade',command=lambda: self.updateTradeEditor(trade_listing))
+        button=Button(self_frame, text='Remove Trade', command=lambda: self.update_editor_with_trade_listing(trade_listing))
         button.grid(row=2,column=0,padx=10,pady=5)
 
         self.change_color(self.configs['theme']['color'][2],self_frame)
-            
+
         self.full_trade_listings_widgets.append(self_frame)
         self.full_trade_listings.append(trade_listing)
 
         return self_frame
+
+    """
+    creates an option-menu widget
+    """
+    def create_new_menu_widget(self, field_name, options, row, where, existing_value='Empty', column=0):
+        self.create_new_left_label_widget(field_name, row, where)
+
+        selected=StringVar()
+        selected.set(existing_value)
+
+        menu=OptionMenu(where,selected,*options)
+        menu.grid(row=row,column=column+1,padx=(5,10),pady=10)
+
+        return selected,menu
+
+    """
+    creates a radio-button widget
+    """
+    @staticmethod
+    def create_new_option_button_widget(field_names, row, where, column=0):
+        var=IntVar()
+        for i in range(len(field_names)):
+            button=Radiobutton(where,text=field_names[i],variable=var,value=i)
+            button.grid(row=row,column=column+i,padx=10,pady=10)
+
+        return var
+
+    """
+    creates an entry-field widget
+    """
+    @staticmethod
+    def create_new_entry_widget(row, where, column=0, existing_value='0'):
+        entryText=StringVar()
+
+        entry=Entry(where,width=10,textvariable=entryText)
+        entry.grid(row=row,column=column+1,padx=(5,10),pady=10)
+        entry.insert(0,existing_value)
+
+        return entryText
+
+    """
+    creates a label, usually to describe a component placed to the right of it
+    """
+    @staticmethod
+    def create_new_left_label_widget(field_name, row, where, column=0):
+        desc=Label(where,text=field_name)
+        desc.grid(row=row,column=column,padx=(10,5),pady=10)
+
+    """
+    creates a label/entry-field pair
+    """
+    def create_new_entry_label_widget(self, field_name, row, where, column=0, existing_value='0'):
+        self.create_new_left_label_widget(field_name, row, where, column=column)
+        entry=self.create_new_entry_widget(row, where, column=column, existing_value=existing_value)
+
+        return entry
+
+    """
+    creates a label, usually to display a constant
+    """
+    def create_new_label_widget(self, field_name, row, where, column=0, existing_value=0):
+        self.create_new_left_label_widget(field_name, row, where)
+
+        value=Label(where,text=existing_value)
+        value.grid(row=row,column=column+1,padx=10,pady=10)
+
+    """
+    creates an entry-field/calendar widget
+    """
+    def create_new_entry_calendar_widget(self, field_name, row, where, column=0, existing_value='00:00'):
+        self.create_new_left_label_widget(field_name, row, where, column=column)
+
+        today=datetime.now()
+        calendar=DateEntry(where,width=10,year=today.year,month=today.month,day=today.day)
+        calendar.grid(row=row,column=column+1,padx=10,pady=10)
+
+        entry=self.create_new_entry_widget(row, where, column + 1, existing_value=existing_value)
+
+        return calendar,entry
+
+    """
+    displays a pop-up which displays an error
+    """
+    @staticmethod
+    def create_new_popup_widget(error_type, error_message):
+        messagebox.showerror(error_type,error_message)
