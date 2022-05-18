@@ -1,7 +1,7 @@
 #two spaces for indentation
 ---
   data_file: "test_data.csv"
-   #window color scheme
+  #window color scheme
   theme:
     color: ["#d6ffe0","#b3ffc6","#75d18c"]
   #logic constants

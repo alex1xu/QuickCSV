@@ -1,5 +1,6 @@
 """
-Alex Xu (alex1xu)
+Alex Xu
+(alex1xu)
 alexxugn@gmail.com
 
 __main__.py
