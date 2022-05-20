@@ -61,11 +61,11 @@ class GUI:
         self.change_color(self.configs['theme']['color'][1],self.right_frame)
 
 # populates frame with trade widgets
-        self.full_trade_listings=[]
         self.full_trade_listings_widgets=[]
-        for each in util.CSV.trade_listings:
-            self.shift_trade_listings_down()
-            self.create_new_trade_listing_tab(each, 0)
+        self.populate_trade_listing_widgets()
+
+        self.inEditMode=False
+        self.originalEdit=None
 
         self.root.resizable(False,False)
         self.root.mainloop()
@@ -83,9 +83,10 @@ class GUI:
         if type(container) is not Frame and type(container) is not Button and type(container) is not OptionMenu and type(container) is not Label and type(container) is not Radiobutton and type(container) is not Canvas:
             return
 
-        container.config(bg=color)
         if type(container) is Button:
             container.config(highlightbackground=color)
+        else:
+            container.config(bg=color)
 
         for child in container.winfo_children():
             self.change_color(color,child)
@@ -112,8 +113,8 @@ class GUI:
     re-orders the trades based on parameters
     """
     def display_trade_listings(self, sort_by=0,mkt=None,qty_min=None,qty_max=None,entryTime=None, exitTime=None,_type=None,lmtPrc=None,ptPrc=None,slPrc=None):
-        for i in range(len(self.full_trade_listings)):
-            for j in range(len(self.full_trade_listings)):
+        for i in range(1):
+            for j in range(1):
                 pass
 
     """
@@ -149,11 +150,15 @@ class GUI:
 
         util.CSV.trade_listings.append(result)
 
-        self.shift_trade_listings_down()
-        self.create_new_trade_listing_tab(result, 0)
+        if self.inEditMode:
+            self.delete_matching_trade_listing(self.originalEdit)
+            self.inEditMode=False
+            self.originalEdit=None
 
         util.CSV.write()
         util.CSV.read()
+
+        self.populate_trade_listing_widgets()
 
         return result
 
@@ -161,6 +166,9 @@ class GUI:
     updates each of the fields in the editor with the values from a trade listing
     """
     def update_editor_with_trade_listing(self, trade_listing):
+        self.inEditMode=True
+        self.originalEdit=trade_listing
+
         self.fields_list['buy/sell'].set('Buy' if trade_listing.qty<=0 else 'Sell')
         self.fields_list['mkt'].set(int(trade_listing.mkt))
         self.fields_list['qty'].set(float(trade_listing.qty))
@@ -172,6 +180,48 @@ class GUI:
         self.fields_list['lmtPrc'].set(int(trade_listing.lmtPrc))
         self.fields_list['ptPrc'].set(int(trade_listing.ptPrc))
         self.fields_list['slPrc'].set(int(trade_listing.slPrc))
+
+    """
+    deletes the matching trade listing from the list
+    """
+    def delete_matching_trade_listing(self,check):
+        for each in util.CSV.trade_listings:
+            if each.tradeDate.strftime(self.configs['dc']['CSVdf']) != check.tradeDate.strftime(self.configs['dc']['CSVdf']): continue
+            if each.mkt != check.mkt: continue
+            if each.qty != check.qty: continue
+            if each.entryTime.strftime(self.configs['dc']['CSVdtf']) != check.entryTime.strftime(self.configs['dc']['CSVdtf']): continue
+            if each.exitTime.strftime(self.configs['dc']['CSVdtf']) != check.exitTime.strftime(self.configs['dc']['CSVdtf']): continue
+            if each._type != check._type: continue
+            if each.lmtPrc != check.lmtPrc: continue
+            if each.ptPrc != check.ptPrc: continue
+            if each.slPrc != check.slPrc: continue
+
+            util.CSV.trade_listings.remove(each)
+            return
+
+    """
+    recreates all of the trade widgets
+    """
+    def populate_trade_listing_widgets(self):
+        for each in self.full_trade_listings_widgets:
+            each.destroy()
+
+        self.full_trade_listings_widgets=[]
+
+        for each in util.CSV.trade_listings:
+            self.shift_trade_listings_down()
+            self.create_new_trade_listing_tab(each, 0)
+
+    """
+    delete a trade listing
+    """
+    def delete_trade_listing(self,check):
+        self.delete_matching_trade_listing(check)
+
+        util.CSV.write()
+        util.CSV.read()
+
+        self.populate_trade_listing_widgets()
 
     """
     *********************************************
@@ -241,16 +291,15 @@ class GUI:
         desc=Label(self_frame,text=desc_text)
         desc.grid(row=0,column=0,padx=(25,5),pady=10)
 
+        self.full_trade_listings_widgets.append(self_frame)
+
         button=Button(self_frame, text='Edit Trade', command=lambda: self.update_editor_with_trade_listing(trade_listing))
         button.grid(row=1,column=0,padx=10,pady=5)
 
-        button=Button(self_frame, text='Remove Trade', command=lambda: self.update_editor_with_trade_listing(trade_listing))
+        button=Button(self_frame, text='Remove Trade', command=lambda: self.delete_trade_listing(trade_listing))
         button.grid(row=2,column=0,padx=10,pady=5)
 
         self.change_color(self.configs['theme']['color'][2],self_frame)
-
-        self.full_trade_listings_widgets.append(self_frame)
-        self.full_trade_listings.append(trade_listing)
 
         return self_frame
 

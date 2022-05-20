@@ -51,7 +51,7 @@ class CSV:
 
         dataframe=pd.DataFrame(result)
         dataframe.set_index('TradeDate')
-        dataframe.to_csv(main.configs['data_file'])
+        dataframe.to_csv(main.configs['data_file'],index=False)
 
 
 class TradeListing:
