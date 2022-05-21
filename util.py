@@ -18,7 +18,7 @@ class CSV:
 
     @staticmethod
     def read():
-        data=pd.read_csv(main.configs['data_file'])
+        data=pd.read_csv(main.configs['trade_file'])
         CSV.trade_listings=[]
         for index,row in data.iterrows():
             result=TradeListing(
@@ -51,11 +51,11 @@ class CSV:
 
         dataframe=pd.DataFrame(result)
         dataframe.set_index('TradeDate')
-        dataframe.to_csv(main.configs['data_file'],index=False)
+        dataframe.to_csv(main.configs['trade_file'],index=False)
 
 
 class TradeListing:
-    def __init__(self,tradeDate,mkt,qty,entryTime,exitTime,_type,lmtPrc,ptPrc,slPrc):
+    def __init__(self,tradeDate,mkt,qty,entryTime,exitTime,_type,lmtPrc,ptPrc,slPrc,frame=None):
         self.tradeDate=tradeDate
         self.mkt=mkt
         self.qty=qty
@@ -65,3 +65,4 @@ class TradeListing:
         self.lmtPrc=lmtPrc
         self.ptPrc=ptPrc
         self.slPrc=slPrc
+        self.frame=frame

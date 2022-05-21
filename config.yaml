@@ -1,9 +1,11 @@
 #two spaces for indentation
 ---
-  data_file: "test_data.csv"
+  trade_file: "test_data.csv"
+  futures_file: "futuresinfo.csv"
   #window color scheme
   theme:
-    color: ["#d6ffe0","#b3ffc6","#75d18c"]
+    #three primary colors, two helper colors
+    color: ["#d6ffe0","#b3ffc6","#75d18c","#baed21","#fcc332"]
   #logic constants
   lc:
     acc: 40

@@ -26,6 +26,9 @@ class GUI:
     def __init__(self):
         self.configs=main.configs
 
+        self.market_names=[*main.futures['name']]
+        self.market_IDs=[*main.futures['marketID']]
+
 # main window set-up
         self.root=Tk()
         self.root.title('Quick CSV Editor')
@@ -66,15 +69,16 @@ class GUI:
         self.filter_fields_list=self.create_utility_editor()
         self.editor_fields_list=self.create_trade_editor()
 
-        self.change_color(self.configs['theme']['color'][0],self.util_frame)
-        self.change_color(self.configs['theme']['color'][1],self.editor_frame)
+        self.change_color(self.util_frame,self.configs['theme']['color'][0])
+        self.change_color(self.editor_frame,self.configs['theme']['color'][1])
 
 # populates frame with trade widgets
         self.full_trade_listings_widgets=[]
         self.populate_trade_listing_widgets(util.CSV.trade_listings)
 
-        self.inEditMode=False
+        self.inEditMode=None
         self.originalEdit=None
+        self.change_edit_state()
 
         self.root.resizable(False,False)
         self.root.mainloop()
@@ -88,7 +92,7 @@ class GUI:
     """
     changes the color of a subtree of widgets
     """
-    def change_color(self,color,container):
+    def change_color(self,container,color):
         if type(container) is not Frame and type(container) is not Button and type(container) is not OptionMenu and type(container) is not Label and type(container) is not Radiobutton and type(container) is not Canvas:
             return
 
@@ -98,7 +102,7 @@ class GUI:
             container.config(bg=color)
 
         for child in container.winfo_children():
-            self.change_color(color,child)
+            self.change_color(child,color)
 
     """
     TO BE IMPLEMENTED
@@ -106,9 +110,30 @@ class GUI:
     checks every field for errors
     """
     def check_for_errors(self):
+        bad=False
+        message=''
         if self.editor_fields_list['mkt'].get()== 'Empty':
-            self.create_new_popup_widget('Form Entry Error', 'Market field is empty')
-            return True
+            bad=True
+            message='Market field is empty'
+
+        if bad:
+            self.change_color(self.editor_frame,self.configs['theme']['color'][4])
+            self.create_new_popup_widget('Form Entry Error',message)
+
+        return bad
+
+    def change_edit_state(self,edit=None):
+        self.inEditMode=edit is not None
+        if self.originalEdit is not None:
+            self.change_color(self.originalEdit.frame,self.configs['theme']['color'][2])
+
+        self.originalEdit=edit
+
+        if self.originalEdit is None:
+            self.root.title('Quick CSV Editor (insert mode)')
+        else:
+            self.root.title('Quick CSV Editor (edit mode)')
+            self.change_color(self.originalEdit.frame,self.configs['theme']['color'][3])
 
     """
     *********************************************
@@ -158,7 +183,7 @@ class GUI:
 
         result=util.TradeListing(
             tradeDate=datetime.now(),
-            mkt=self.editor_fields_list['mkt'].get(),
+            mkt=self.market_IDs[self.market_names.index(self.editor_fields_list['mkt'].get())],
             qty=self.editor_fields_list['qty'].get(),
             entryTime=datetime.combine(entrydt[0].get_date(),datetime.strptime(entrydt[1].get(),self.configs['dc']['UItf']).time()),
             exitTime=datetime.combine(exitdt[0].get_date(),datetime.strptime(exitdt[1].get(),self.configs['dc']['UItf']).time()),
@@ -171,13 +196,13 @@ class GUI:
 
         if self.inEditMode:
             self.delete_matching_trade_listing(self.originalEdit)
-            self.inEditMode=False
-            self.originalEdit=None
+            self.change_edit_state()
 
         util.CSV.write()
         util.CSV.read()
 
         self.populate_trade_listing_widgets(util.CSV.trade_listings)
+        self.update_editor_with_new_trade_listing()
 
         return result
 
@@ -185,8 +210,7 @@ class GUI:
     updates each field in editor with a new trade listing
     """
     def update_editor_with_new_trade_listing(self):
-        self.inEditMode=False
-        self.originalEdit=None
+        self.change_edit_state()
 
         self.editor_fields_list['buy/sell'].set(0)
         self.editor_fields_list['mkt'].set('Empty')
@@ -205,11 +229,10 @@ class GUI:
     updates each of the fields in the editor with the values from a trade listing
     """
     def update_editor_with_trade_listing(self, trade_listing):
-        self.inEditMode=True
-        self.originalEdit=trade_listing
+        self.change_edit_state(trade_listing)
 
         self.editor_fields_list['buy/sell'].set('Buy' if trade_listing.qty <= 0 else 'Sell')
-        self.editor_fields_list['mkt'].set(int(trade_listing.mkt))
+        self.editor_fields_list['mkt'].set(self.market_names[self.market_IDs.index(int(trade_listing.mkt))])
         self.editor_fields_list['qty'].set(float(trade_listing.qty))
         self.editor_fields_list['entryTime'][0].set_date(trade_listing.entryTime)
         self.editor_fields_list['exitTime'][0].set_date(trade_listing.exitTime)
@@ -306,7 +329,7 @@ class GUI:
         fields_list['reloadable']=self.create_new_menu_widget('Reloadable', ['True', 'False'], self.right_widget_index, self.editor_frame, existing_value='False')[0]
         self.right_widget_index+=1
 
-        fields_list['mkt']=self.create_new_menu_widget('Market', [i for i in range(10)], self.right_widget_index, self.editor_frame, 'Empty')[0]
+        fields_list['mkt']=self.create_new_menu_widget('Market', self.market_names, self.right_widget_index, self.editor_frame, 'Empty')[0]
         self.right_widget_index+=1
 
         fields_list['qty']=self.create_new_entry_label_widget('Fund Qty', self.right_widget_index, self.editor_frame)
@@ -343,11 +366,13 @@ class GUI:
         self_frame=Frame(self.left_frame)
         self_frame.grid(row=row,column=column,padx=2,pady=2)
 
+        trade_listing.frame=self_frame
+
         desc_text='Trade Date: {tradeDate}\nEntry Time: {entryTime}\nExit Time: {exitTime}\nmkt: {mkt}\nqty: {qty}'.format(
             tradeDate=trade_listing.tradeDate.strftime(self.configs['dc']['UIdf']),
             entryTime=trade_listing.entryTime.strftime(self.configs['dc']['UIdtf']),
             exitTime=trade_listing.exitTime.strftime(self.configs['dc']['UIdtf']),
-            mkt=trade_listing.mkt,
+            mkt=self.market_names[self.market_IDs.index(trade_listing.mkt)],
             qty=trade_listing.qty)
         desc=Label(self_frame,text=desc_text)
         desc.grid(row=0,column=0,padx=(25,5),pady=10)
@@ -360,7 +385,7 @@ class GUI:
         button=Button(self_frame, text='Remove Trade', command=lambda: self.delete_trade_listing(trade_listing))
         button.grid(row=2,column=0,padx=10,pady=5)
 
-        self.change_color(self.configs['theme']['color'][2],self_frame)
+        self.change_color(self_frame,self.configs['theme']['color'][2])
 
         return self_frame
 

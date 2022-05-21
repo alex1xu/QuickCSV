@@ -12,6 +12,7 @@ __main__.py
 import app
 import yaml
 import util as util
+import pandas as pd
 
 
 def load_configs():
@@ -26,7 +27,17 @@ def load_configs():
     return configs
 
 
+def load_futures_info():
+    """
+    loads the futures info file
+    """
+
+    futures_info=pd.read_csv(configs['futures_file'])
+    return futures_info
+
+
 configs=load_configs()
+futures=load_futures_info()
 
 util.CSV.read()
 
