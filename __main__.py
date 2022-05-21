@@ -32,7 +32,7 @@ def load_futures_info():
     loads the futures info file
     """
 
-    futures_info=pd.read_csv(configs['futures_file'])
+    futures_info=pd.read_csv(configs['futures_file'],dtype=str)
     return futures_info
 
 

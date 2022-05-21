@@ -28,6 +28,7 @@ class GUI:
 
         self.market_names=[*main.futures['name']]
         self.market_IDs=[*main.futures['marketID']]
+        self.market_IDs=list(map(lambda x:int(x),self.market_IDs))
 
 # main window set-up
         self.root=Tk()
@@ -110,22 +111,43 @@ class GUI:
     checks every field for errors
     """
     def check_for_errors(self):
-        bad=False
-        message=''
-        if self.editor_fields_list['mkt'].get()== 'Empty':
-            bad=True
-            message='Market field is empty'
+        """
+        0 is no warning
+        1 is useless trade
+        2 is bad trade
+        3 is bad format
+        """
+        message=[]
 
-        if bad:
-            self.change_color(self.editor_frame,self.configs['theme']['color'][4])
-            self.create_new_popup_widget('Form Entry Error',message)
+        if self.editor_fields_list['mkt'].get()=='Empty':
+            message.append('Market must be selected')
 
-        return bad
+        if self.editor_fields_list['qty'].get()==0:
+            message.append('Quantity cannot be zero')
+
+        if self.parse_date_from_two(self.editor_fields_list['exitTime'])<datetime.now():
+            message.append('Activity period is in the past')
+
+        if self.parse_date_from_two(self.editor_fields_list['entryTime'])>=self.parse_date_from_two(self.editor_fields_list['exitTime']):
+            message.append('Activity period is non-positive')
+
+        if len(message)==0:
+            return False
+
+        self.change_color(self.editor_frame,self.configs['theme']['color'][4])
+        res='There are {d} errors:\n'.format(d=len(message))
+        for i in message:
+            res+=i+'\n'
+        self.create_new_popup_widget('Form Entry Error',res)
+
+        return True
 
     def change_edit_state(self,edit=None):
         self.inEditMode=edit is not None
         if self.originalEdit is not None:
             self.change_color(self.originalEdit.frame,self.configs['theme']['color'][2])
+
+        self.change_color(self.editor_frame,self.configs['theme']['color'][1])
 
         self.originalEdit=edit
 
@@ -152,7 +174,7 @@ class GUI:
             if self.filter_fields_list['active'].get()=='Active' and (each.entryTime>datetime.now() or each.exitTime<datetime.now()): continue
             if self.filter_fields_list['active'].get()=='Inactive' and (each.entryTime<=datetime.now() and each.exitTime>=datetime.now()): continue
 
-            if self.filter_fields_list['mkt']=='Any' and self.filter_fields_list['mkt'].get()!=each.mkt: continue
+            if self.filter_fields_list['mkt'].get()!='Any' and self.market_IDs[self.market_names.index(self.filter_fields_list['mkt'].get())]!=each.mkt: continue
 
             sub_list.append(each)
 
@@ -170,6 +192,9 @@ class GUI:
             each.grid(row=j,column=0)
             j+=1
 
+    def parse_date_from_two(self,entrydt):
+        return datetime.combine(entrydt[0].get_date(),datetime.strptime(entrydt[1].get(),self.configs['dc']['UItf']).time())
+
     """
     -creates a new trade listing from the current values in each field
     -writes the trade listing to the csv
@@ -178,15 +203,12 @@ class GUI:
         if self.check_for_errors():
             return
 
-        entrydt=self.editor_fields_list['entryTime']
-        exitdt=self.editor_fields_list['exitTime']
-
         result=util.TradeListing(
             tradeDate=datetime.now(),
             mkt=self.market_IDs[self.market_names.index(self.editor_fields_list['mkt'].get())],
             qty=self.editor_fields_list['qty'].get(),
-            entryTime=datetime.combine(entrydt[0].get_date(),datetime.strptime(entrydt[1].get(),self.configs['dc']['UItf']).time()),
-            exitTime=datetime.combine(exitdt[0].get_date(),datetime.strptime(exitdt[1].get(),self.configs['dc']['UItf']).time()),
+            entryTime=self.parse_date_from_two(self.editor_fields_list['entryTime']),
+            exitTime=self.parse_date_from_two(self.editor_fields_list['exitTime']),
             _type=self.editor_fields_list['type'].get() if self.editor_fields_list['reloadable'] == 'False' else -1 * self.editor_fields_list['type'].get(),
             lmtPrc=self.editor_fields_list['lmtPrc'].get(),
             ptPrc=self.editor_fields_list['ptPrc'].get(),
@@ -215,15 +237,15 @@ class GUI:
         self.editor_fields_list['buy/sell'].set(0)
         self.editor_fields_list['mkt'].set('Empty')
         self.editor_fields_list['type'].set(0)
-        self.editor_fields_list['qty'].set(0)
+        self.editor_fields_list['qty'].set(float(0))
         self.editor_fields_list['entryTime'][0].set_date(datetime.now())
         self.editor_fields_list['exitTime'][0].set_date(datetime.now())
         self.editor_fields_list['entryTime'][1].set(datetime.now().strftime(self.configs['dc']['UItf']))
         self.editor_fields_list['exitTime'][1].set(datetime.now().strftime(self.configs['dc']['UItf']))
         self.editor_fields_list['reloadable'].set('False')
-        self.editor_fields_list['lmtPrc'].set(int(0))
-        self.editor_fields_list['ptPrc'].set(int(0))
-        self.editor_fields_list['slPrc'].set(int(0))
+        self.editor_fields_list['lmtPrc'].set(float(0))
+        self.editor_fields_list['ptPrc'].set(float(0))
+        self.editor_fields_list['slPrc'].set(float(0))
 
     """
     updates each of the fields in the editor with the values from a trade listing
@@ -233,15 +255,15 @@ class GUI:
 
         self.editor_fields_list['buy/sell'].set('Buy' if trade_listing.qty <= 0 else 'Sell')
         self.editor_fields_list['mkt'].set(self.market_names[self.market_IDs.index(int(trade_listing.mkt))])
-        self.editor_fields_list['qty'].set(float(trade_listing.qty))
+        self.editor_fields_list['qty'].set(trade_listing.qty)
         self.editor_fields_list['entryTime'][0].set_date(trade_listing.entryTime)
         self.editor_fields_list['exitTime'][0].set_date(trade_listing.exitTime)
         self.editor_fields_list['entryTime'][1].set(trade_listing.entryTime.strftime(self.configs['dc']['UItf']))
         self.editor_fields_list['exitTime'][1].set(trade_listing.exitTime.strftime(self.configs['dc']['UItf']))
         self.editor_fields_list['reloadable'].set('True' if trade_listing._type < 0 else 'False')
-        self.editor_fields_list['lmtPrc'].set(int(trade_listing.lmtPrc))
-        self.editor_fields_list['ptPrc'].set(int(trade_listing.ptPrc))
-        self.editor_fields_list['slPrc'].set(int(trade_listing.slPrc))
+        self.editor_fields_list['lmtPrc'].set(trade_listing.lmtPrc)
+        self.editor_fields_list['ptPrc'].set(trade_listing.ptPrc)
+        self.editor_fields_list['slPrc'].set(trade_listing.slPrc)
 
     """
     deletes the matching trade listing from the list
@@ -272,12 +294,20 @@ class GUI:
 
         for each in sub_list:
             self.shift_trade_listings_down()
-            self.create_new_trade_listing_tab(each, 0)
+            self.create_new_trade_listing_tab(each,0)
 
     """
     delete a trade listing
     """
     def delete_trade_listing(self,check):
+        confirm=messagebox.askquestion("Delete","Are You Sure?",icon='warning')
+        if confirm=='no':
+            return
+
+        if self.originalEdit is check:
+            self.change_edit_state()
+            self.update_editor_with_new_trade_listing()
+
         self.delete_matching_trade_listing(check)
 
         util.CSV.write()
@@ -301,7 +331,7 @@ class GUI:
 
         fields_list['active']=self.create_new_menu_widget('Range', ['Any', 'Active', 'Inactive'], self.right_widget_index, self.util_frame, existing_value='Any')[0]
 
-        fields_list['mkt']=self.create_new_menu_widget('Market', [i for i in range(10)], self.right_widget_index, self.util_frame, 'Any',column=2)[0]
+        fields_list['mkt']=self.create_new_menu_widget('Market', ['Any']+self.market_names, self.right_widget_index, self.util_frame, 'Any',column=2)[0]
         self.right_widget_index+=1
 
         filter_button=Button(self.util_frame, text='Filter', command=self.display_trade_listings)
@@ -439,7 +469,7 @@ class GUI:
     """
     creates a label/entry-field pair
     """
-    def create_new_entry_label_widget(self, field_name, row, where, column=0, existing_value='0'):
+    def create_new_entry_label_widget(self, field_name, row, where, column=0, existing_value='0.0'):
         self.create_new_left_label_widget(field_name, row, where, column=column)
         entry=self.create_new_entry_widget(row, where, column=column, existing_value=existing_value)
 

@@ -18,19 +18,19 @@ class CSV:
 
     @staticmethod
     def read():
-        data=pd.read_csv(main.configs['trade_file'])
+        data=pd.read_csv(main.configs['trade_file'],dtype=str)
         CSV.trade_listings=[]
         for index,row in data.iterrows():
             result=TradeListing(
                 tradeDate=datetime.strptime(str(int(row['TradeDate'])),main.configs['dc']['CSVdf']),
-                mkt=row['mkt'],
-                qty=row['qty'],
+                mkt=int(row['mkt']),
+                qty=float(row['qty']),
                 entryTime=datetime.strptime(str(row['entryTime']),main.configs['dc']['CSVdtf']),
                 exitTime=datetime.strptime(str(row['exitTime']),main.configs['dc']['CSVdtf']),
-                _type=row['type'],
-                lmtPrc=row['lmtPrc'],
-                ptPrc=row['ptPrc'],
-                slPrc=row['slPrc'])
+                _type=int(row['type']),
+                lmtPrc=float(row['lmtPrc']),
+                ptPrc=float(row['ptPrc']),
+                slPrc=float(row['slPrc']))
 
             CSV.trade_listings.append(result)
 
@@ -41,13 +41,13 @@ class CSV:
             result['TradeDate'].append(int(each.tradeDate.strftime(main.configs['dc']['CSVdf'])))
             result['acc'].append(40)
             result['mkt'].append(int(each.mkt))
-            result['qty'].append(each.qty)
+            result['qty'].append(float(each.qty))
             result['entryTime'].append(each.entryTime.strftime(main.configs['dc']['CSVdtf']))
             result['exitTime'].append(each.exitTime.strftime(main.configs['dc']['CSVdtf']))
             result['type'].append(int(each._type))
-            result['lmtPrc'].append(int(each.lmtPrc))
-            result['ptPrc'].append(int(each.ptPrc))
-            result['slPrc'].append(int(each.slPrc))
+            result['lmtPrc'].append(float(each.lmtPrc))
+            result['ptPrc'].append(float(each.ptPrc))
+            result['slPrc'].append(float(each.slPrc))
 
         dataframe=pd.DataFrame(result)
         dataframe.set_index('TradeDate')

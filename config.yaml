@@ -5,7 +5,7 @@
   #window color scheme
   theme:
     #three primary colors, two helper colors
-    color: ["#d6ffe0","#b3ffc6","#75d18c","#baed21","#fcc332"]
+    color: ["#d6ffe0","#b3ffc6","#75d18c","#affa5f","#e7f048"]
   #logic constants
   lc:
     acc: 40
