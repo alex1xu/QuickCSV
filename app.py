@@ -55,14 +55,23 @@ class GUI:
         self.right_frame=Frame(self.main_frame)
         self.right_frame.pack(side=RIGHT)
 
-# widget set-up
-        self.fields_list=self.create_trade_editor()
+        self.util_frame=Frame(self.right_frame)
+        self.util_frame.pack(side=TOP)
 
-        self.change_color(self.configs['theme']['color'][1],self.right_frame)
+        self.editor_frame=Frame(self.right_frame)
+        self.editor_frame.pack(side=TOP)
+
+# widget set-up
+        self.right_widget_index=0
+        self.filter_fields_list=self.create_utility_editor()
+        self.editor_fields_list=self.create_trade_editor()
+
+        self.change_color(self.configs['theme']['color'][0],self.util_frame)
+        self.change_color(self.configs['theme']['color'][1],self.editor_frame)
 
 # populates frame with trade widgets
         self.full_trade_listings_widgets=[]
-        self.populate_trade_listing_widgets()
+        self.populate_trade_listing_widgets(util.CSV.trade_listings)
 
         self.inEditMode=False
         self.originalEdit=None
@@ -97,7 +106,7 @@ class GUI:
     checks every field for errors
     """
     def check_for_errors(self):
-        if self.fields_list['mkt'].get()=='Empty':
+        if self.editor_fields_list['mkt'].get()== 'Empty':
             self.create_new_popup_widget('Form Entry Error', 'Market field is empty')
             return True
 
@@ -112,10 +121,20 @@ class GUI:
     
     re-orders the trades based on parameters
     """
-    def display_trade_listings(self, sort_by=0,mkt=None,qty_min=None,qty_max=None,entryTime=None, exitTime=None,_type=None,lmtPrc=None,ptPrc=None,slPrc=None):
-        for i in range(1):
-            for j in range(1):
-                pass
+    def display_trade_listings(self):
+        sub_list=[]
+        for each in util.CSV.trade_listings:
+            if self.filter_fields_list['active'].get()=='Active' and (each.entryTime>datetime.now() or each.exitTime<datetime.now()): continue
+            if self.filter_fields_list['active'].get()=='Inactive' and (each.entryTime<=datetime.now() and each.exitTime>=datetime.now()): continue
+
+            if self.filter_fields_list['mkt']=='Any' and self.filter_fields_list['mkt'].get()!=each.mkt: continue
+
+            sub_list.append(each)
+
+        self.populate_trade_listing_widgets(sub_list)
+
+        return sub_list
+
 
     """
     shifts each trade listing tab down, usually used for sorting/adding a new tab
@@ -134,19 +153,19 @@ class GUI:
         if self.check_for_errors():
             return
 
-        entrydt=self.fields_list['entryTime']
-        exitdt=self.fields_list['exitTime']
+        entrydt=self.editor_fields_list['entryTime']
+        exitdt=self.editor_fields_list['exitTime']
 
         result=util.TradeListing(
             tradeDate=datetime.now(),
-            mkt=self.fields_list['mkt'].get(),
-            qty=self.fields_list['qty'].get(),
+            mkt=self.editor_fields_list['mkt'].get(),
+            qty=self.editor_fields_list['qty'].get(),
             entryTime=datetime.combine(entrydt[0].get_date(),datetime.strptime(entrydt[1].get(),self.configs['dc']['UItf']).time()),
             exitTime=datetime.combine(exitdt[0].get_date(),datetime.strptime(exitdt[1].get(),self.configs['dc']['UItf']).time()),
-            _type=self.fields_list['type'].get() if self.fields_list['reloadable']=='False' else -1*self.fields_list['type'].get(),
-            lmtPrc=self.fields_list['lmtPrc'].get(),
-            ptPrc=self.fields_list['ptPrc'].get(),
-            slPrc=self.fields_list['slPrc'].get())
+            _type=self.editor_fields_list['type'].get() if self.editor_fields_list['reloadable'] == 'False' else -1 * self.editor_fields_list['type'].get(),
+            lmtPrc=self.editor_fields_list['lmtPrc'].get(),
+            ptPrc=self.editor_fields_list['ptPrc'].get(),
+            slPrc=self.editor_fields_list['slPrc'].get())
 
         util.CSV.trade_listings.append(result)
 
@@ -158,9 +177,29 @@ class GUI:
         util.CSV.write()
         util.CSV.read()
 
-        self.populate_trade_listing_widgets()
+        self.populate_trade_listing_widgets(util.CSV.trade_listings)
 
         return result
+
+    """
+    updates each field in editor with a new trade listing
+    """
+    def update_editor_with_new_trade_listing(self):
+        self.inEditMode=False
+        self.originalEdit=None
+
+        self.editor_fields_list['buy/sell'].set(0)
+        self.editor_fields_list['mkt'].set('Empty')
+        self.editor_fields_list['type'].set(0)
+        self.editor_fields_list['qty'].set(0)
+        self.editor_fields_list['entryTime'][0].set_date(datetime.now())
+        self.editor_fields_list['exitTime'][0].set_date(datetime.now())
+        self.editor_fields_list['entryTime'][1].set(datetime.now().strftime(self.configs['dc']['UItf']))
+        self.editor_fields_list['exitTime'][1].set(datetime.now().strftime(self.configs['dc']['UItf']))
+        self.editor_fields_list['reloadable'].set('False')
+        self.editor_fields_list['lmtPrc'].set(int(0))
+        self.editor_fields_list['ptPrc'].set(int(0))
+        self.editor_fields_list['slPrc'].set(int(0))
 
     """
     updates each of the fields in the editor with the values from a trade listing
@@ -169,17 +208,17 @@ class GUI:
         self.inEditMode=True
         self.originalEdit=trade_listing
 
-        self.fields_list['buy/sell'].set('Buy' if trade_listing.qty<=0 else 'Sell')
-        self.fields_list['mkt'].set(int(trade_listing.mkt))
-        self.fields_list['qty'].set(float(trade_listing.qty))
-        self.fields_list['entryTime'][0].set_date(trade_listing.entryTime)
-        self.fields_list['exitTime'][0].set_date(trade_listing.exitTime)
-        self.fields_list['entryTime'][1].set(trade_listing.entryTime.strftime(self.configs['dc']['UItf']))
-        self.fields_list['exitTime'][1].set(trade_listing.exitTime.strftime(self.configs['dc']['UItf']))
-        self.fields_list['reloadable'].set('True' if trade_listing._type<0 else 'False')
-        self.fields_list['lmtPrc'].set(int(trade_listing.lmtPrc))
-        self.fields_list['ptPrc'].set(int(trade_listing.ptPrc))
-        self.fields_list['slPrc'].set(int(trade_listing.slPrc))
+        self.editor_fields_list['buy/sell'].set('Buy' if trade_listing.qty <= 0 else 'Sell')
+        self.editor_fields_list['mkt'].set(int(trade_listing.mkt))
+        self.editor_fields_list['qty'].set(float(trade_listing.qty))
+        self.editor_fields_list['entryTime'][0].set_date(trade_listing.entryTime)
+        self.editor_fields_list['exitTime'][0].set_date(trade_listing.exitTime)
+        self.editor_fields_list['entryTime'][1].set(trade_listing.entryTime.strftime(self.configs['dc']['UItf']))
+        self.editor_fields_list['exitTime'][1].set(trade_listing.exitTime.strftime(self.configs['dc']['UItf']))
+        self.editor_fields_list['reloadable'].set('True' if trade_listing._type < 0 else 'False')
+        self.editor_fields_list['lmtPrc'].set(int(trade_listing.lmtPrc))
+        self.editor_fields_list['ptPrc'].set(int(trade_listing.ptPrc))
+        self.editor_fields_list['slPrc'].set(int(trade_listing.slPrc))
 
     """
     deletes the matching trade listing from the list
@@ -202,13 +241,13 @@ class GUI:
     """
     recreates all of the trade widgets
     """
-    def populate_trade_listing_widgets(self):
+    def populate_trade_listing_widgets(self,sub_list):
         for each in self.full_trade_listings_widgets:
             each.destroy()
 
         self.full_trade_listings_widgets=[]
 
-        for each in util.CSV.trade_listings:
+        for each in sub_list:
             self.shift_trade_listings_down()
             self.create_new_trade_listing_tab(each, 0)
 
@@ -221,7 +260,7 @@ class GUI:
         util.CSV.write()
         util.CSV.read()
 
-        self.populate_trade_listing_widgets()
+        self.populate_trade_listing_widgets(util.CSV.trade_listings)
 
     """
     *********************************************
@@ -230,48 +269,70 @@ class GUI:
     """
 
     """
+    creates utlity widgets
+    -new trade button
+    -sorting parameters
+    """
+    def create_utility_editor(self):
+        fields_list={}
+
+        fields_list['active']=self.create_new_menu_widget('Range', ['Any', 'Active', 'Inactive'], self.right_widget_index, self.util_frame, existing_value='Any')[0]
+
+        fields_list['mkt']=self.create_new_menu_widget('Market', [i for i in range(10)], self.right_widget_index, self.util_frame, 'Any',column=2)[0]
+        self.right_widget_index+=1
+
+        filter_button=Button(self.util_frame, text='Filter', command=self.display_trade_listings)
+        filter_button.grid(row=self.right_widget_index,column=1,padx=10,pady=10)
+        self.right_widget_index+=1
+
+        filter_button=Button(self.util_frame, text='New Trade', command=self.update_editor_with_new_trade_listing)
+        filter_button.grid(row=self.right_widget_index,column=1,padx=10,pady=10)
+        self.right_widget_index+=1
+
+        return fields_list
+
+    """
     creates all of the widgets needed to input a new trade listing
     """
     def create_trade_editor(self):
         fields_list={}
 
-        #Buy/Sell
-        fields_list['buy/sell']=self.create_new_option_button_widget(['Buy', 'Sell'], 0, self.right_frame)
+        fields_list['buy/sell']=self.create_new_option_button_widget(['Buy', 'Sell'], self.right_widget_index, self.editor_frame)
+        self.right_widget_index+=1
 
-        #Fixed/Limit/Stop
-        fields_list['type']=self.create_new_option_button_widget(['Fixed Time', 'Limit Order', 'Stop Order'], 1, self.right_frame)
+        fields_list['type']=self.create_new_option_button_widget(['Fixed Time', 'Limit Order', 'Stop Order'], self.right_widget_index, self.editor_frame)
+        self.right_widget_index+=1
 
-        #Reloadable
-        fields_list['reloadable']=self.create_new_menu_widget('Reloadable', ['True', 'False'], 2, self.right_frame, existing_value='False')[0]
+        fields_list['reloadable']=self.create_new_menu_widget('Reloadable', ['True', 'False'], self.right_widget_index, self.editor_frame, existing_value='False')[0]
+        self.right_widget_index+=1
 
-        #Market
-        fields_list['mkt']=self.create_new_menu_widget('Market', [i for i in range(10)], 3, self.right_frame, 'Empty')[0]
+        fields_list['mkt']=self.create_new_menu_widget('Market', [i for i in range(10)], self.right_widget_index, self.editor_frame, 'Empty')[0]
+        self.right_widget_index+=1
 
-        #Fund Qty
-        fields_list['qty']=self.create_new_entry_label_widget('Fund Qty', 4, self.right_frame)
+        fields_list['qty']=self.create_new_entry_label_widget('Fund Qty', self.right_widget_index, self.editor_frame)
+        self.right_widget_index+=1
 
-        #Constants
-        self.create_new_label_widget('Fund Mult: ', 5, self.right_frame, existing_value=self.configs['lc']['fund_mult'])
-        self.create_new_label_widget('Sig Qty: ', 6, self.right_frame, existing_value=self.configs['lc']['sig_qty'])
+        self.create_new_label_widget('Fund Mult: ', self.right_widget_index, self.editor_frame, existing_value=self.configs['lc']['fund_mult'])
+        self.create_new_label_widget('Sig Qty: ', self.right_widget_index, self.editor_frame, existing_value=self.configs['lc']['sig_qty'])
 
-        #Entry date time
-        fields_list['entryTime']=self.create_new_entry_calendar_widget('Entry DateTime', 7, self.right_frame,existing_value=datetime.now().strftime(self.configs['dc']['UItf']))
+        fields_list['entryTime']=self.create_new_entry_calendar_widget('Entry DateTime', self.right_widget_index, self.editor_frame, existing_value=datetime.now().strftime(self.configs['dc']['UItf']))
+        self.right_widget_index+=1
 
-        #Exit date time
-        fields_list['exitTime']=self.create_new_entry_calendar_widget('Exit DateTime', 8, self.right_frame,existing_value=datetime.now().strftime(self.configs['dc']['UItf']))
+        fields_list['exitTime']=self.create_new_entry_calendar_widget('Exit DateTime', self.right_widget_index, self.editor_frame, existing_value=datetime.now().strftime(self.configs['dc']['UItf']))
+        self.right_widget_index+=1
 
-        #Limit Price
-        fields_list['lmtPrc']=self.create_new_entry_label_widget('Limit Price', 9, self.right_frame)
+        fields_list['lmtPrc']=self.create_new_entry_label_widget('Limit Price', self.right_widget_index, self.editor_frame)
+        self.right_widget_index+=1
 
-        #P/T Price
-        fields_list['ptPrc']=self.create_new_entry_label_widget('P/T Price', 10, self.right_frame)
+        fields_list['ptPrc']=self.create_new_entry_label_widget('P/T Price', self.right_widget_index, self.editor_frame)
+        self.right_widget_index+=1
 
-        #S/L Price
-        fields_list['slPrc']=self.create_new_entry_label_widget('S/L Price', 11, self.right_frame)
+        fields_list['slPrc']=self.create_new_entry_label_widget('S/L Price', self.right_widget_index, self.editor_frame)
+        self.right_widget_index+=1
 
-        #create save button
-        save_button=Button(self.right_frame, text='Save', command=self.save_as_new_trade_listing)
-        save_button.grid(row=12,column=1)
+        save_button=Button(self.editor_frame, text='Save', command=self.save_as_new_trade_listing)
+        save_button.grid(row=self.right_widget_index,column=1)
+        self.right_widget_index+=1
 
         return fields_list
 
@@ -307,7 +368,7 @@ class GUI:
     creates an option-menu widget
     """
     def create_new_menu_widget(self, field_name, options, row, where, existing_value='Empty', column=0):
-        self.create_new_left_label_widget(field_name, row, where)
+        self.create_new_left_label_widget(field_name, row, where,column=column)
 
         selected=StringVar()
         selected.set(existing_value)
